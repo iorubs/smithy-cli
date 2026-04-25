@@ -16,6 +16,7 @@ type MCPUpCmd struct {
 	Name string `arg:"" help:"mcp server name (must exist in the compose file)"`
 }
 
+// Run executes the mcp up command.
 func (m *MCPUpCmd) Run() error {
 	return nil
 }

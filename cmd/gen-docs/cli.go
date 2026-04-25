@@ -33,7 +33,7 @@ var cliOutDir = filepath.Join("docs", "user", "reference", "cli")
 func generateCLIDocs() error {
 	var cli commands.CLI
 	parser, err := kong.New(&cli,
-		kong.Description("CLI for running and managing smithy MCP Servers and Agents"),
+		kong.Description("CLI for running and managing smithy MCP Servers and Agents."),
 	)
 	if err != nil {
 		return fmt.Errorf("creating Kong parser: %w", err)

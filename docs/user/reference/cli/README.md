@@ -2,7 +2,7 @@
 
 ## smithy
 
-CLI for running and managing smithy MCP Servers and Agents
+CLI for running and managing smithy MCP Servers and Agents.
 
 ```
 smithy <command> [flags]
@@ -200,6 +200,11 @@ smithy compose restart [flags]
 ```
 smithy compose validate [flags]
 ```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `smithy-compose.yaml` | Path to compose file. |
+
 
 #### compose setup
 

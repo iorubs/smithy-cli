@@ -20,6 +20,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error generating CLI docs: %v\n", err)
 		os.Exit(1)
 	}
+
+	if err := generateConfigDocs(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error generating config docs: %v\n", err)
+		os.Exit(1)
+	}
 }
 
 // renderTemplate parses the named template file under tmplDir and executes

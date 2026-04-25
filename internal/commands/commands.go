@@ -10,6 +10,7 @@ import (
 // LogLevel represents a supported log verbosity level.
 type LogLevel string
 
+// Supported log verbosity levels.
 const (
 	LogLevelDebug LogLevel = "debug"
 	LogLevelInfo  LogLevel = "info"
@@ -25,6 +26,8 @@ type CLI struct {
 	Compose  compose.Cmd `cmd:"" help:"Run and manage multi Agent and MCP server flows."`
 }
 
+// ConfigFlag is the shared `--config` flag embedded in subcommands
+// that need a compose file path.
 type ConfigFlag struct {
 	Config string `help:"Path to config." default:"smithy-compose.yaml" type:"path" short:"c"`
 }

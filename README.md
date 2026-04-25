@@ -1,2 +1,40 @@
 # smithy-cli
-CLI for running and managing smithy MCP Servers and Agents
+
+> The unified `smithy` CLI for the smithy stack. Run a single MCP
+> server, run a single agent, or orchestrate multi-server flows
+> with `smithy compose`.
+
+**smithy-cli** is the front-end for [mcpsmithy](https://github.com/iorubs/mcpsmithy)
+and agentsmithy. It embeds the upstream commands and adds a
+daemon-backed `compose` supervisor for running stacks of MCP servers
+and agents together.
+
+## Quick Start
+
+```bash
+# From source (Go 1.26+)
+go build -o bin/smithy ./cmd/smithy
+
+# Single MCP server
+smithy mcp --help
+
+# Single agent
+smithy agent --help
+
+# Multi-server flow
+smithy compose up -c smithy-compose.yaml
+```
+
+## Documentation
+
+### For Users
+
+| | |
+|---|---|
+| [CLI Reference](docs/user/reference/cli/README.md) | Generated command reference |
+
+### For Contributors
+
+| | |
+|---|---|
+| [Development Guide](docs/development/README.md) | Architecture, CLI design, testing |

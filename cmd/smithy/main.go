@@ -1,3 +1,5 @@
+// Command smithy is the unified CLI for running and managing smithy
+// MCP servers and agents.
 package main
 
 import (
