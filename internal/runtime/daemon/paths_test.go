@@ -7,7 +7,7 @@ import (
 )
 
 func TestValidateName(t *testing.T) {
-	ok := []string{"axion", "a", "0", "axion-prod", "api_v2", "abc123"}
+	ok := []string{"sample", "a", "0", "sample-prod", "api_v2", "abc123"}
 	for _, n := range ok {
 		if err := ValidateName(n); err != nil {
 			t.Errorf("ValidateName(%q) unexpected error: %v", n, err)
@@ -22,15 +22,15 @@ func TestValidateName(t *testing.T) {
 }
 
 func TestPathsFor(t *testing.T) {
-	p, err := PathsFor("axion")
+	p, err := PathsFor("sample")
 	if err != nil {
 		t.Fatalf("PathsFor: %v", err)
 	}
 	if !filepath.IsAbs(p.Dir) {
 		t.Errorf("Dir not absolute: %q", p.Dir)
 	}
-	if filepath.Base(p.Dir) != "axion" {
-		t.Errorf("Dir basename = %q, want %q", filepath.Base(p.Dir), "axion")
+	if filepath.Base(p.Dir) != "sample" {
+		t.Errorf("Dir basename = %q, want %q", filepath.Base(p.Dir), "sample")
 	}
 	if filepath.Base(p.Socket) != "daemon.sock" {
 		t.Errorf("Socket basename = %q", filepath.Base(p.Socket))

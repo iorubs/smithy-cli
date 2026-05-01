@@ -41,6 +41,6 @@ behaves exactly the way you want.
 
 ## Config Overview
 
-### Reference docs:
+### Reference docs
 - [Config Reference](../reference/config/README.md)
 - [CLI Reference](../reference/cli/README.md)
