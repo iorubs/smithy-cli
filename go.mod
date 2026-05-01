@@ -7,13 +7,11 @@ require (
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/iorubs/agentsmithy v0.0.0-00010101000000-000000000000
+	github.com/iorubs/agentsmithy v0.0.0-20260501210318-8240c0ad5c53
 	github.com/iorubs/mcpsmithy v0.1.0-rc2.0.20260501205923-94df9ac9919d
 	github.com/modelcontextprotocol/go-sdk v1.5.0
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
 )
-
-replace github.com/iorubs/agentsmithy => ../agentsmithy
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect

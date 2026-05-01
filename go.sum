@@ -36,6 +36,8 @@ github.com/google/jsonschema-go v0.4.2 h1:tmrUohrwoLZZS/P3x7ex0WAVknEkBZM46iALbc
 github.com/google/jsonschema-go v0.4.2/go.mod h1:r5quNTdLOYEz95Ru18zA0ydNbBuYoo9tgaYcxEYhJVE=
 github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
 github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSow5/V2vxeg=
+github.com/iorubs/agentsmithy v0.0.0-20260501210318-8240c0ad5c53 h1:MdhUQRa/YVK5Pi2d3IRepmv+u1dmQ7x40wEJxAtGoAc=
+github.com/iorubs/agentsmithy v0.0.0-20260501210318-8240c0ad5c53/go.mod h1:jSngJCPuo973sw++OnKiu5/nSDzLu5ZdOxf+HrtEsqc=
 github.com/iorubs/mcpsmithy v0.1.0-rc2.0.20260501205923-94df9ac9919d h1:2etNYo5641F62TjdC8fPvLrm0UdedVXqaHFVQc24WU0=
 github.com/iorubs/mcpsmithy v0.1.0-rc2.0.20260501205923-94df9ac9919d/go.mod h1:lWXH5gz/nx+/ZUpxy292V6aIn34OfofFZan4Lq6sITg=
 github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQwVHXptag=
