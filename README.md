@@ -2,11 +2,13 @@
 
 > The unified `smithy` CLI for the smithy stack. Run a single MCP
 > server, run a single agent, or orchestrate multi-server flows
-> with `smithy compose`.
+> with `smithy stack`.
+
+![smithy-cli forge](docs/images/forge.png)
 
 **smithy-cli** is the front-end for [mcpsmithy](https://github.com/iorubs/mcpsmithy)
 and agentsmithy. It embeds the upstream commands and adds a
-daemon-backed `compose` supervisor for running stacks of MCP servers
+daemon-backed `stack` supervisor for running stacks of MCP servers
 and agents together.
 
 ## Quick Start
@@ -22,7 +24,7 @@ smithy mcp --help
 smithy agent --help
 
 # Multi-server flow
-smithy compose up -c smithy-compose.yaml
+smithy stack up -c smithy-stack.yaml
 ```
 
 ## Documentation

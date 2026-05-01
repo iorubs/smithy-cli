@@ -38,7 +38,7 @@ func Process(v any) []error {
 			}
 		}
 
-		// Required — nothing else to check on a zero value.
+		// Required: nothing else to check on a zero value.
 		if isZero(fv) {
 			if info.Required {
 				errs = append(errs, errors.New(path+" is required"))
@@ -74,7 +74,7 @@ func Process(v any) []error {
 			}
 		}
 
-		// Ref — value must appear as a key in at least one referenced map.
+		// Ref: value must appear as a key in at least one referenced map.
 		if len(info.Refs) > 0 && fv.Kind() == reflect.String {
 			var validKeys []string
 			for _, refPath := range info.Refs {
@@ -91,8 +91,7 @@ func Process(v any) []error {
 	})
 
 	// Struct-level validation: oneof groups, typed-as constraints, and the
-	// validator interface. Combined into a single pass to avoid redundant
-	// tree traversals.
+	// validator interface. Combined into a single pass to avoid redundant tree traversals.
 	walkStructNodes(v, "", func(rv reflect.Value, path string) {
 		errs = append(errs, oneOfErrors(rv, path)...)
 		errs = append(errs, typedAsErrors(rv, path)...)
@@ -262,7 +261,7 @@ func oneOfErrors(rv reflect.Value, structPath string) []error {
 		}
 		switch len(setNames) {
 		case 1:
-			// exactly one — valid for both oneof and oneof?
+			// exactly one: valid for both oneof and oneof?
 		case 0:
 			if g.optional {
 				continue // at-most-one: zero set is fine
@@ -334,7 +333,7 @@ func checkAgainstTypeClassifier(fv reflect.Value, tc typeClassifier, path string
 
 	switch actual.Kind() {
 	case reflect.Interface:
-		// any / interface{} field — validate the Go type of the stored value.
+		// any / interface{} field: validate the Go type of the stored value.
 		if actual.IsNil() {
 			return nil
 		}

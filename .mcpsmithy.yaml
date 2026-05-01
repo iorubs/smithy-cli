@@ -1,0 +1,94 @@
+version: "1"
+
+project:
+  name: "smithy-cli"
+  description: "Unified CLI for running and managing smithy MCP servers and agents."
+  sources:
+    local:
+      runtime:
+        paths: ["internal/runtime/**/*.go"]
+        description: "Compose translator, MCP runner adapter, and fan-out launcher"
+      commands:
+        paths: ["internal/commands/**/*.go"]
+        description: "Kong subcommand wiring (stack, mcp, agent)"
+      config:
+        paths: ["internal/config/**/*.go"]
+        description: "Versioned smithy-stack.yaml loader and v1 schema"
+      setup:
+        paths: ["internal/setup/**/*.go", "internal/setup/sections/*.md"]
+        description: "Authoring MCP server (`smithy stack setup`)"
+      tests:
+        paths: ["internal/**/*_test.go"]
+        description: "Stdlib table-driven unit tests"
+      developer-docs:
+        paths: ["docs/development/**/*.md"]
+        description: "Plan, architecture, and development conventions"
+      user-docs:
+        paths: ["docs/user/**/*.md", "README.md"]
+        description: "User-facing reference and getting-started"
+
+conventions:
+  code-style:
+    scope: "**/*.go"
+    docs:
+      - source: developer-docs
+    description: |
+      Standard Go style. Stdlib testing only — no third-party assertion
+      libraries. Prefer table-driven tests when a function has multiple
+      input/output variations. No decorative separator comments.
+
+  stack-runtime:
+    scope: "internal/runtime/**"
+    docs:
+      - source: developer-docs
+        paths:
+          - docs/development/plan.md
+    description: |
+      The runtime package owns the stack lifecycle. It stays small
+      on purpose: a Translate that resolves the v1 schema into a Plan,
+      a RunMCP adapter that delegates to mcpsmithy/pkg/api, and a
+      Launch that fans out via errgroup. Daemon, IPC, log files, and
+      per-service supervision land in later phases.
+
+  config-schema:
+    scope: "internal/config/**"
+    docs:
+      - source: developer-docs
+    description: |
+      Versioned YAML config. The smithy struct tag is the single source
+      of truth for required fields, defaults, and generated reference
+      docs. Enums are named string types implementing Valuer — there is
+      no enum= tag directive.
+
+tools:
+  project_info:
+    description: "Returns project name, description, sources, and conventions. Call at the start of every session."
+    template: |
+      {{ .mcpsmithy.Project }}
+
+      Tools:
+      {{ .mcpsmithy.Tools }}
+
+      Conventions:
+      {{ .mcpsmithy.Conventions }}
+
+  find_convention:
+    description: "Returns conventions for a specific file path."
+    template: "{{ conventions_for .path }}"
+    params:
+      - name: "path"
+        type: "string"
+        required: true
+        description: "File path to check conventions for"
+
+  project_commands:
+    description: "How to build, test, and run smithy-cli."
+    template: |
+      Project commands (run from {{ .mcpsmithy.Project.Root }}):
+
+      Build:        go build ./cmd/smithy
+      Test:         go test ./...
+      Lint:         go vet ./...
+      Docs gen:     go run ./cmd/gen-docs
+      Validate:     go run ./cmd/smithy stack validate
+      Up:           go run ./cmd/smithy stack up

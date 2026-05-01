@@ -1,0 +1,12 @@
+version: "1"
+
+mcps:
+  smithy-cli:
+    config: .mcpsmithy.yaml
+    transport: http
+    addr: :8080
+
+  smithy-cli2:
+    config: .mcpsmithy.yaml
+    transport: http
+    addr: :8081

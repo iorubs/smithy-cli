@@ -11,6 +11,7 @@ import (
 
 	"github.com/alecthomas/kong"
 	"github.com/iorubs/smithy-cli/internal/commands"
+	"github.com/iorubs/smithy-cli/internal/runtime"
 )
 
 func main() {
@@ -30,9 +31,11 @@ func main() {
 		kong.BindTo(ctx, (*context.Context)(nil)),
 	)
 
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		Level: commands.ParseLogLevel(c.LogLevel),
-	})))
+	var level slog.Level
+	_ = level.UnmarshalText([]byte(c.LogLevel))
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
+	ctx = runtime.WithLogLevel(ctx, c.LogLevel)
+	kctx.BindTo(ctx, (*context.Context)(nil))
 
 	kctx.FatalIfErrorf(kctx.Run(&c))
 }

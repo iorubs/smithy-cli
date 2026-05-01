@@ -24,7 +24,7 @@ smithy mcp [flags]
 
 #### mcp up
 
-Run a MCP Smithy server with the supervisor.
+Start a named MCP server via the stack daemon.
 
 ```
 smithy mcp up [flags]
@@ -32,12 +32,31 @@ smithy mcp up [flags]
 
 | Argument | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `name` | yes | — | mcp server name (must exist in the compose file) |
+| `name` | yes | — | MCP server name (must exist in the stack file). |
 
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `-c, --config` | `string` | `smithy-compose.yaml` | Path to config. |
+| `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
+| `-d, --detach` | `bool` | — | Return after the service starts instead of following logs. |
+
+
+#### mcp down
+
+Stop a named MCP server in the stack daemon.
+
+```
+smithy mcp down [flags]
+```
+
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `name` | yes | — | MCP server name. |
+
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
 
 
 #### mcp serve
@@ -95,7 +114,7 @@ smithy agent [flags]
 
 #### agent up
 
-Run an Agent Smithy server with the supervisor.
+Start a named agent via the stack daemon.
 
 ```
 smithy agent up [flags]
@@ -103,113 +122,207 @@ smithy agent up [flags]
 
 | Argument | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `name` | yes | — | agent name (must exist in the compose file) |
+| `name` | yes | — | agent name (must exist in the stack file) |
 
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `-c, --config` | `string` | `smithy-compose.yaml` | Path to config. |
+| `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
 
+
+#### agent down
+
+Stop a named agent in the stack daemon.
+
+```
+smithy agent down [flags]
+```
+
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `name` | yes | — | agent name (must exist in the stack file) |
+
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
+
+
+#### agent serve
+
+Start the agent server.
+
+```
+smithy agent serve [flags]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `.agentsmithy.yaml` | Path to config. |
+| `--transport` | `enum(a2a,stdio,mcp-stdio,mcp-http)` | `a2a` | Transport to use. |
+| `--addr` | `string` | `:8080` | Listen address (HTTP-like transports). |
+| `--watch` | `bool` | `false` | Watch config file and hot-reload on change. |
+
+
+#### agent validate
+
+Validate config file.
+
+```
+smithy agent validate [flags]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `.agentsmithy.yaml` | Path to config. |
+
+
+#### agent setup
+
+Start the config-authoring MCP assistant.
+
+```
+smithy agent setup [flags]
+```
 
 #### agent chat
 
-Chat with a running agent.
+Chat with the configured agent (minimal stdio REPL).
 
 ```
 smithy agent chat [flags]
 ```
 
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `.agentsmithy.yaml` | Path to config. |
+| `-o, --once` | `string` | — | Single-shot input; print response and exit. |
+| `-v, --verbose` | `bool` | — | Print tool calls and intermediate steps. |
+
+
+### stack
+
+Run and manage multi Agent and MCP server stacks.
+
+```
+smithy stack [flags]
+```
+
+#### stack up
+
+Start a named stack and follow its log.
+
+```
+smithy stack up [flags]
+```
+
 | Argument | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `name` | yes | — | agent name (must exist in the compose file) |
+| `name` | no | — | Stack name. Defaults to the stack file's basename without extension. |
 
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `-c, --config` | `string` | `smithy-compose.yaml` | Path to config. |
+| `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
+| `-d, --detach` | `bool` | — | Return after the daemon is ready instead of following its log. |
 
 
-### compose
+#### stack ls
 
-Run and manage multi Agent and MCP server flows.
-
-```
-smithy compose [flags]
-```
-
-#### compose up
-
-Start all Smithy Agent and MCP servers.
+List all stacks under ./.smithy/.
 
 ```
-smithy compose up [flags]
+smithy stack ls [flags]
 ```
 
-#### compose ps
+#### stack ps
 
-
-
-```
-smithy compose ps [flags]
-```
-
-#### compose status
-
-
+List services in a running stack.
 
 ```
-smithy compose status [flags]
+smithy stack ps [flags]
 ```
 
-#### compose logs
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `name` | no | — | Stack name. |
 
 
-
-```
-smithy compose logs [flags]
-```
-
-#### compose down
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
 
 
+#### stack logs
 
-```
-smithy compose down [flags]
-```
-
-#### compose attach
-
-
+Stream the daemon log for a stack.
 
 ```
-smithy compose attach [flags]
+smithy stack logs [flags]
 ```
 
-#### compose restart
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `name` | no | — | Stack name. |
 
 
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
+| `-f, --follow` | `bool` | — | Follow log output in --json mode. |
+| `--json` | `bool` | — | Output raw log instead of the interactive TUI. |
+
+
+#### stack down
+
+Stop a running stack.
 
 ```
-smithy compose restart [flags]
+smithy stack down [flags]
 ```
 
-#### compose validate
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `name` | no | — | Stack name. |
 
 
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
+
+
+#### stack validate
+
+Validate a stack file.
 
 ```
-smithy compose validate [flags]
+smithy stack validate [flags]
 ```
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `-c, --config` | `string` | `smithy-compose.yaml` | Path to compose file. |
+| `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
 
 
-#### compose setup
+#### stack setup
 
-
+Run setup steps for stack services.
 
 ```
-smithy compose setup [flags]
+smithy stack setup [flags]
 ```
+
+### __daemon__
+
+Internal: run a stack as a daemon (re-exec target of stack up -d).
+
+```
+smithy __daemon__ [flags]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
+| `--name` | `string` | — | Stack name. |
+| `--start-all` | `bool` | — | Start all services on daemon startup. |
+

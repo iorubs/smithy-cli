@@ -19,7 +19,6 @@ var typesSource string
 var TypesSources = []string{typesSource}
 
 // Schema satisfies the config.VersionSchema interface for v1.
-// Since v1 is the latest version, Parse returns directly without conversion.
 type Schema struct{}
 
 // Parse parses raw YAML bytes into a v1 Config, applies defaults, and

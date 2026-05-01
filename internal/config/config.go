@@ -1,15 +1,5 @@
-// Package config loads and version-routes smithy-compose.yaml configs.
-//
-// Each config schema version lives in its own sub-package (v1/, v2/, …)
-// and satisfies the [VersionSchema] interface. The loader reads raw YAML,
-// detects the "version" field, and delegates to the correct version.
-//
-// Adding a new version:
-//  1. Create the vN/ sub-package satisfying [VersionSchema]
-//  2. Register it in the versions map in this file
-//
-// Type aliases below re-export the latest version's types so that
-// consumers can keep importing "internal/config" without change.
+// Package config loads and version-routes smithy-stack.yaml configs.
+// Each schema version lives in its own sub-package and satisfies [VersionSchema].
 package config
 
 import (
@@ -36,10 +26,9 @@ type VersionSchema interface {
 }
 
 // TypesSources returns the raw Go source files for the latest version's types.
-// Callers that only need the latest version can use this directly.
 var TypesSources = v1.TypesSources
 
-// Type aliases — always point to the latest version.
+// Type aliases: always point to the latest version.
 type (
 	Config = v1.Config
 )

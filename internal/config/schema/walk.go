@@ -7,8 +7,7 @@ import (
 
 // isNestedStruct reports whether fv is a struct, ptr-to-struct, or map —
 // i.e. a container the walker recurses into. Slices are excluded so that
-// value slices ([]any, []string, etc.) can participate in oneof groups as
-// leaf values.
+// value slices ([]any, []string, etc.) can participate in oneof groups as leaf values.
 func isNestedStruct(fv reflect.Value) bool {
 	switch fv.Kind() {
 	case reflect.Struct, reflect.Map:
@@ -83,7 +82,10 @@ func walk(rv reflect.Value, prefix string, onStruct func(reflect.Value, string),
 				continue
 			}
 			raw := field.Tag.Get(tagName)
-			if raw == "" {
+			// Fields without a smithy tag still need a leaf visit when their
+			// type carries built-in checks (valuer enums, custom validators).
+			ft := fv.Type()
+			if raw == "" && !ft.Implements(valuerType) && !ft.Implements(validatorType) {
 				continue
 			}
 			info := parseTag(raw)
