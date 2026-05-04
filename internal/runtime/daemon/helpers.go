@@ -82,3 +82,30 @@ func ReadMeta(paths Paths) (StackMeta, bool) {
 	}
 	return m, true
 }
+
+// SetChatContextID writes contextID into the stack metadata under
+// agent. Pass an empty contextID to remove the entry. The write is
+// atomic (rename) so concurrent readers never see a torn file.
+func SetChatContextID(paths Paths, agent, contextID string) error {
+	meta, ok := ReadMeta(paths)
+	if !ok {
+		return fmt.Errorf("read stack meta")
+	}
+	if meta.Chats == nil {
+		meta.Chats = map[string]string{}
+	}
+	if contextID == "" {
+		delete(meta.Chats, agent)
+	} else {
+		meta.Chats[agent] = contextID
+	}
+	data, err := json.MarshalIndent(meta, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp := paths.Meta + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, paths.Meta)
+}

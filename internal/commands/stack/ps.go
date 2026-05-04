@@ -21,7 +21,7 @@ type PsCmd struct {
 
 // Run executes the ps command.
 func (c *PsCmd) Run(ctx context.Context) error {
-	name, err := resolveStackName(c.Name, c.Config)
+	name, err := ResolveStackName(c.Name, c.Config)
 	if err != nil {
 		return fmt.Errorf("stack: %w", err)
 	}

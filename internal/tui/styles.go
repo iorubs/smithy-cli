@@ -12,6 +12,7 @@ var (
 	styleKindMCP    = lipgloss.NewStyle().Foreground(lipgloss.Color("#F472B6")).Bold(true)
 	styleKindAgent  = lipgloss.NewStyle().Foreground(lipgloss.Color("#34D399")).Bold(true)
 	styleKindDaemon = lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280")).Bold(true)
+	styleSelected   = lipgloss.NewStyle().Reverse(true)
 
 	styleLogTime  = lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280"))
 	styleLogInfo  = lipgloss.NewStyle().Foreground(lipgloss.Color("#60A5FA"))

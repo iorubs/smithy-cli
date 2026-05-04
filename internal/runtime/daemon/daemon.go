@@ -21,13 +21,27 @@ import (
 // shutdownGrace bounds how long Run waits for Launch to return after ctx is cancelled.
 const shutdownGrace = 5 * time.Second
 
+// restartDelay throttles auto-restart so a crash-looping service
+// can't fill the log file with thousands of identical errors per
+// second. Cheap, simple, and enough to keep logs readable.
+const restartDelay = time.Second
+
+// SpawnTimeout bounds how long an `up` command waits for the daemon's
+// socket to come online when it has to spawn the daemon itself.
+const SpawnTimeout = 10 * time.Second
+
 // StackMeta describes a backgrounded stack. Written to Paths.Meta on
-// Run and read by ls/down for display and config recovery.
+// Run and read by ls/down for display and config recovery. The
+// `Chats` map is mutated by `smithy agent chat` while the daemon is
+// running to persist a2a contextIDs across CLI invocations; it is
+// cleared together with the rest of the file on daemon shutdown,
+// which matches the lifetime of in-memory agent sessions.
 type StackMeta struct {
-	Name       string `json:"name"`
-	ConfigPath string `json:"config_path"`
-	PID        int    `json:"pid"`
-	StartedAt  string `json:"started_at"`
+	Name       string            `json:"name"`
+	ConfigPath string            `json:"config_path"`
+	PID        int               `json:"pid"`
+	StartedAt  string            `json:"started_at"`
+	Chats      map[string]string `json:"chats,omitempty"`
 }
 
 // Run is the body of the hidden `__daemon__` Kong subcommand. It
@@ -67,7 +81,9 @@ func Run(ctx context.Context, name, stackPath string, startAll bool, logLevel st
 		StartedAt:  time.Now().UTC().Format(time.RFC3339),
 	}
 	if metaBytes, err := json.MarshalIndent(meta, "", "  "); err == nil {
-		_ = os.WriteFile(paths.Meta, metaBytes, 0o644)
+		if werr := os.WriteFile(paths.Meta, metaBytes, 0o644); werr != nil {
+			slog.WarnContext(ctx, "daemon: write stack meta", "path", paths.Meta, "error", werr)
+		}
 	}
 	defer os.Remove(paths.Meta)
 
@@ -79,11 +95,14 @@ func Run(ctx context.Context, name, stackPath string, startAll bool, logLevel st
 	if err != nil {
 		return fmt.Errorf("daemon: parse stack: %w", err)
 	}
+	if err := loadStackEnv(stackPath, cfg); err != nil {
+		return fmt.Errorf("daemon: load env: %w", err)
+	}
 	plan, err := runtime.Translate(cfg, stackPath)
 	if err != nil {
 		return fmt.Errorf("daemon: translate stack: %w", err)
 	}
-	if len(plan.MCPs) == 0 {
+	if len(plan.MCPs)+len(plan.Agents) == 0 {
 		return fmt.Errorf("daemon: no services declared in %s", stackPath)
 	}
 
@@ -92,7 +111,7 @@ func Run(ctx context.Context, name, stackPath string, startAll bool, logLevel st
 		initialState = ipc.StateRunning
 	}
 	state := newStateTable(plan, initialState)
-	sm := newServiceManager(plan, state)
+	sm := newServiceManagerWithRunners(plan, state, runtime.RunMCP, runtime.RunAgent)
 
 	ln, err := listenSocket(paths.Socket)
 	if err != nil {
@@ -105,9 +124,11 @@ func Run(ctx context.Context, name, stackPath string, startAll bool, logLevel st
 	defer cancelRun()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc(ipc.PathStatus, func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc(ipc.PathStatus, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json")
-		_ = json.NewEncoder(w).Encode(state.snapshot())
+		if err := json.NewEncoder(w).Encode(state.snapshot()); err != nil {
+			slog.WarnContext(r.Context(), "daemon: encode status", "error", err)
+		}
 	})
 	mux.HandleFunc(ipc.PathShutdown, func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -158,7 +179,7 @@ func Run(ctx context.Context, name, stackPath string, startAll bool, logLevel st
 		srvDone <- err
 	}()
 
-	slog.InfoContext(ctx, "daemon ready", "name", name, "socket", paths.Socket, "services", len(plan.MCPs))
+	slog.InfoContext(ctx, "daemon ready", "name", name, "socket", paths.Socket, "services", len(plan.MCPs)+len(plan.Agents))
 
 	if startAll {
 		sm.startAll(runCtx)
@@ -221,6 +242,13 @@ func newStateTable(plan runtime.Plan, initialState ipc.State) *stateTable {
 			State: initialState,
 		})
 	}
+	for _, a := range plan.Agents {
+		t.rows = append(t.rows, ipc.StatusLine{
+			Name:  a.Name,
+			Kind:  ipc.KindAgent,
+			State: initialState,
+		})
+	}
 	return t
 }
 
@@ -248,29 +276,54 @@ func (t *stateTable) setState(name string, s ipc.State) {
 // independently without touching siblings.
 type serviceManager struct {
 	mu      sync.Mutex
-	specs   map[string]runtime.MCPSpec
+	entries map[string]serviceEntry
 	names   []string // preserves plan ordering for startAll
 	cancels map[string]context.CancelFunc
 	state   *stateTable
-	runner  runtime.Runner
 	wg      sync.WaitGroup
 }
 
-func newServiceManager(plan runtime.Plan, state *stateTable) *serviceManager {
-	return newServiceManagerWithRunner(plan, state, runtime.RunMCP)
+// serviceEntry holds the per-service runtime hooks. The closure
+// captures the typed spec and the runner that knows how to drive it,
+// so the manager can treat MCPs and agents uniformly.
+type serviceEntry struct {
+	autoRestart bool
+	run         func(ctx context.Context) error
 }
 
-func newServiceManagerWithRunner(plan runtime.Plan, state *stateTable, runner runtime.Runner) *serviceManager {
+func newServiceManagerWithRunners(
+	plan runtime.Plan,
+	state *stateTable,
+	mcpRunner runtime.Runner,
+	agentRunner runtime.AgentRunner,
+) *serviceManager {
+	total := len(plan.MCPs) + len(plan.Agents)
 	sm := &serviceManager{
-		specs:   make(map[string]runtime.MCPSpec, len(plan.MCPs)),
-		names:   make([]string, len(plan.MCPs)),
-		cancels: make(map[string]context.CancelFunc, len(plan.MCPs)),
+		entries: make(map[string]serviceEntry, total),
+		names:   make([]string, 0, total),
+		cancels: make(map[string]context.CancelFunc, total),
 		state:   state,
-		runner:  runner,
 	}
-	for i, spec := range plan.MCPs {
-		sm.specs[spec.Name] = spec
-		sm.names[i] = spec.Name
+	for _, spec := range plan.MCPs {
+		sm.entries[spec.Name] = serviceEntry{
+			autoRestart: spec.AutoRestart,
+			run: func(ctx context.Context) error {
+				return mcpRunner(ctx, spec, os.Stdout, os.Stderr)
+			},
+		}
+		sm.names = append(sm.names, spec.Name)
+	}
+	for _, spec := range plan.Agents {
+		sm.entries[spec.Name] = serviceEntry{
+			autoRestart: spec.AutoRestart,
+			run: func(ctx context.Context) error {
+				if agentRunner == nil {
+					return fmt.Errorf("agent runner not configured")
+				}
+				return agentRunner(ctx, spec, os.Stdout, os.Stderr)
+			},
+		}
+		sm.names = append(sm.names, spec.Name)
 	}
 	return sm
 }
@@ -279,7 +332,7 @@ func newServiceManagerWithRunner(plan runtime.Plan, state *stateTable, runner ru
 // Idempotent: already-running is a no-op.
 func (sm *serviceManager) start(ctx context.Context, name string) error {
 	sm.mu.Lock()
-	spec, ok := sm.specs[name]
+	entry, ok := sm.entries[name]
 	if !ok {
 		sm.mu.Unlock()
 		return fmt.Errorf("unknown service %q", name)
@@ -293,11 +346,9 @@ func (sm *serviceManager) start(ctx context.Context, name string) error {
 	sm.state.setState(name, ipc.StateRunning)
 	sm.mu.Unlock()
 
-	sm.wg.Add(1)
-	go func() {
-		defer sm.wg.Done()
+	sm.wg.Go(func() {
 		for {
-			err := sm.runner(svcCtx, spec, os.Stdout, os.Stderr)
+			err := entry.run(svcCtx)
 			if err == nil {
 				slog.InfoContext(ctx, "daemon: service finished", "service", name)
 				break
@@ -306,15 +357,20 @@ func (sm *serviceManager) start(ctx context.Context, name string) error {
 				break
 			}
 			slog.WarnContext(ctx, "daemon: service exited with error", "service", name, "error", err)
-			if !spec.AutoRestart {
+			if !entry.autoRestart {
 				break
+			}
+			select {
+			case <-time.After(restartDelay):
+			case <-svcCtx.Done():
+				return
 			}
 		}
 		sm.mu.Lock()
 		delete(sm.cancels, name)
 		sm.mu.Unlock()
 		sm.state.setState(name, ipc.StateStopped)
-	}()
+	})
 	return nil
 }
 

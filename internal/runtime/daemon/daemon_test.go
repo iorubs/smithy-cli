@@ -20,6 +20,12 @@ func makePlan(names ...string) runtime.Plan {
 	return runtime.Plan{MCPs: specs}
 }
 
+// newServiceManagerWithRunner wires only an MCP runner, for tests that
+// exercise MCP fan-out behaviour without bringing the agent runtime in.
+func newServiceManagerWithRunner(plan runtime.Plan, state *stateTable, runner runtime.Runner) *serviceManager {
+	return newServiceManagerWithRunners(plan, state, runner, nil)
+}
+
 func TestStateTable(t *testing.T) {
 	t.Run("initial state is running for all services", func(t *testing.T) {
 		st := newStateTable(makePlan("a", "b"), ipc.StateRunning)
@@ -57,6 +63,36 @@ func TestStateTable(t *testing.T) {
 		snap := st.snapshot()
 		if snap.Services[0].State != ipc.StateRunning {
 			t.Errorf("a unexpectedly changed")
+		}
+	})
+
+	t.Run("agents land with KindAgent", func(t *testing.T) {
+		plan := runtime.Plan{
+			MCPs:   []runtime.MCPSpec{{Name: "m", AutoRestart: true}},
+			Agents: []runtime.AgentSpec{{Name: "a", AutoRestart: true}},
+		}
+		st := newStateTable(plan, ipc.StateRunning)
+		snap := st.snapshot()
+		if len(snap.Services) != 2 {
+			t.Fatalf("got %d services, want 2", len(snap.Services))
+		}
+		var gotMCP, gotAgent bool
+		for _, s := range snap.Services {
+			switch s.Name {
+			case "m":
+				if s.Kind != ipc.KindMCP {
+					t.Errorf("m kind = %q, want mcp", s.Kind)
+				}
+				gotMCP = true
+			case "a":
+				if s.Kind != ipc.KindAgent {
+					t.Errorf("a kind = %q, want agent", s.Kind)
+				}
+				gotAgent = true
+			}
+		}
+		if !gotMCP || !gotAgent {
+			t.Errorf("missing rows: gotMCP=%v gotAgent=%v", gotMCP, gotAgent)
 		}
 	})
 }

@@ -2,7 +2,7 @@
 
 smithy-cli is the unified `smithy` CLI for the smithy stack. It runs
 single MCP servers and agents, and orchestrates multi-server flows
-via `stack`; a daemon-backed supervisor adapted from procsmithy.
+via `stack`; a daemon-backed supervisor handles multi-process stacks.
 
 ## Design Principles
 

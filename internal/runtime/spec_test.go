@@ -16,14 +16,17 @@ func TestTranslate(t *testing.T) {
 		t.Fatal(err)
 	}
 	stackPath := filepath.Join(dir, "smithy-stack.yaml")
-	absGood, _ := filepath.Abs(good)
+	absGood, err := filepath.Abs(good)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	cases := []struct {
-		name        string
-		cfg         *v1.Config
+		name      string
+		cfg       *v1.Config
 		stackPath string
-		wantErr     string
-		check       func(t *testing.T, plan Plan)
+		wantErr   string
+		check     func(t *testing.T, plan Plan)
 	}{
 		{
 			name:    "nil config",
@@ -63,7 +66,7 @@ func TestTranslate(t *testing.T) {
 				MCPs:    map[string]v1.MCP{"a": {Config: "missing.yaml"}},
 			},
 			stackPath: stackPath,
-			wantErr:     `mcp "a": config:`,
+			wantErr:   `mcp "a": missing.yaml not found`,
 		},
 		{
 			name: "autorestart nil defaults to true",
@@ -139,6 +142,72 @@ func TestTranslate(t *testing.T) {
 				for i := range want {
 					if names[i] != want[i] {
 						t.Errorf("MCPs not sorted: %v, want %v", names, want)
+						return
+					}
+				}
+			},
+		},
+		{
+			name: "agent translated with transport and addr",
+			cfg: &v1.Config{
+				Version: "1",
+				Agents: map[string]v1.Agent{
+					"primary": {
+						Config:    "ok.mcpsmithy.yaml",
+						Transport: v1.AgentTransportA2A,
+						Addr:      "127.0.0.1:8081",
+					},
+				},
+			},
+			stackPath: stackPath,
+			check: func(t *testing.T, plan Plan) {
+				if len(plan.Agents) != 1 {
+					t.Fatalf("Agents len = %d, want 1", len(plan.Agents))
+				}
+				a := plan.Agents[0]
+				if a.Name != "primary" {
+					t.Errorf("Name = %q", a.Name)
+				}
+				if a.ConfigPath != absGood {
+					t.Errorf("ConfigPath = %q, want %q", a.ConfigPath, absGood)
+				}
+				if a.Transport != "a2a" {
+					t.Errorf("Transport = %q", a.Transport)
+				}
+				if a.Addr != "127.0.0.1:8081" {
+					t.Errorf("Addr = %q", a.Addr)
+				}
+				if !a.AutoRestart {
+					t.Error("AutoRestart = false, want true (nil → true)")
+				}
+			},
+		},
+		{
+			name: "agent missing config file errors",
+			cfg: &v1.Config{
+				Version: "1",
+				Agents:  map[string]v1.Agent{"a": {Config: "missing.yaml"}},
+			},
+			stackPath: stackPath,
+			wantErr:   `agent "a": missing.yaml not found`,
+		},
+		{
+			name: "agents sorted by name",
+			cfg: &v1.Config{
+				Version: "1",
+				Agents: map[string]v1.Agent{
+					"c": {Config: absGood},
+					"a": {Config: absGood},
+					"b": {Config: absGood},
+				},
+			},
+			stackPath: stackPath,
+			check: func(t *testing.T, plan Plan) {
+				names := []string{plan.Agents[0].Name, plan.Agents[1].Name, plan.Agents[2].Name}
+				want := []string{"a", "b", "c"}
+				for i := range want {
+					if names[i] != want[i] {
+						t.Errorf("Agents not sorted: %v, want %v", names, want)
 						return
 					}
 				}

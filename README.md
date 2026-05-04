@@ -33,6 +33,7 @@ smithy stack up -c smithy-stack.yaml
 
 | | |
 |---|---|
+| [Docs site](https://iorubs.github.io/smithy-cli/) | Documentation overview |
 | [CLI Reference](docs/user/reference/cli/README.md) | Generated command reference |
 
 ### For Contributors

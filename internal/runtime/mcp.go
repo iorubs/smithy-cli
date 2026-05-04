@@ -9,7 +9,7 @@ import (
 
 // defaultHTTPAddr mirrors the mcpsmithy CLI's `--addr` default. The
 // pkg/api layer doesn't apply it, so we apply it here when an MCP
-// entry leaves `addr` unset on an http/sse transport.
+// entry leaves `addr` unset on an http transport.
 const defaultHTTPAddr = ":8080"
 
 // RunMCP is the default Runner. It loads the referenced mcpsmithy
@@ -21,7 +21,7 @@ func RunMCP(ctx context.Context, spec MCPSpec, _, _ io.Writer) error {
 		return err
 	}
 	addr := spec.Addr
-	if addr == "" && (spec.Transport == "http" || spec.Transport == "sse") {
+	if addr == "" && spec.Transport == "http" {
 		addr = defaultHTTPAddr
 	}
 	return api.Serve(ctx, cfg, api.ServeOptions{

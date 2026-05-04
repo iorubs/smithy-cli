@@ -1,0 +1,18 @@
+version: "1"
+
+mcps:
+  smithy-cli:
+    config: .mcpsmithy.yaml
+    transport: http
+    addr: :8080
+
+agents:
+  a2a:
+    config: .agentsmithy.yaml
+    transport: a2a
+    addr: :8081
+
+  mcp-http:
+    config: .agentsmithy-borrowed.yaml
+    transport: mcp-http
+    addr: :8082

@@ -3,12 +3,6 @@
 The `agents:` map declares each agent in the stack. The field
 reference below covers every field; this guide covers strategy.
 
-> **Status: agent runtime is WIP.** The schema accepts entries by
-> name so stack files can reserve service names today, but the
-> supervisor does not yet execute agents. Treat entries as
-> placeholders until agentsmithy runtime support lands; the rest of
-> this guide describes the shape that's coming.
-
 ### One Entry Per Agent
 
 Each entry is one supervised agent process. Names show up in
@@ -32,6 +26,27 @@ recommendation is to keep the wiring inside the agent's
 `.agentsmithy.yaml` (point its tool endpoints at the MCP addresses
 declared above). Compose-level wiring fields (e.g. an `mcp:` list)
 will land here when the runtime needs them.
+
+### Picking a Transport for `smithy agent chat`
+
+The agent's `transport:` controls how the supervised process
+exposes itself; `smithy agent chat <name>` can attach to two of
+those transports today:
+
+- `a2a` (default) — full chat experience: persistent conversation
+  context across CLI runs, history replay when you reattach, and
+  the standard agent-to-agent JSON-RPC contract.
+- `mcp-http` — chat is wired as a single tool call per turn. No
+  history replay (each turn is a fresh agent session under the
+  hood). Pick this when the agent is primarily consumed by other
+  MCP clients and chat is just a smoke-test affordance.
+
+`mcp-stdio` and `stdio` cannot be chatted with from `smithy agent
+chat` yet — the supervisor owns those processes' stdio pipes, so a
+supervisor-side relay is needed first. Until that lands, run those
+transports directly with `smithy agent serve --transport stdio` for
+interactive use, or expose the agent over `a2a` / `mcp-http` if
+you want to chat through the supervised stack.
 
 ### Naming Across `mcps` and `agents`
 

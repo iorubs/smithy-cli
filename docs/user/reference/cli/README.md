@@ -122,12 +122,13 @@ smithy agent up [flags]
 
 | Argument | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `name` | yes | — | agent name (must exist in the stack file) |
+| `name` | yes | — | Agent name (must exist in the stack file). |
 
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
+| `-d, --detach` | `bool` | — | Return after the service starts instead of opening the dashboard. |
 
 
 #### agent down
@@ -140,12 +141,32 @@ smithy agent down [flags]
 
 | Argument | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `name` | yes | — | agent name (must exist in the stack file) |
+| `name` | yes | — | Agent name. |
 
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
+
+
+#### agent chat
+
+Chat with a daemon-supervised agent over a2a or mcp-http.
+
+```
+smithy agent chat [flags]
+```
+
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `name` | yes | — | Agent name (must exist in the stack file). |
+
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `-c, --config` | `string` | `smithy-stack.yaml` | Path to config. |
+| `-s, --stack` | `string` | — | Stack name (defaults to the stem of --config). |
+| `--reset` | `bool` | — | Discard any persisted contextID and start a fresh conversation. |
 
 
 #### agent serve
@@ -162,6 +183,8 @@ smithy agent serve [flags]
 | `--transport` | `enum(a2a,stdio,mcp-stdio,mcp-http)` | `a2a` | Transport to use. |
 | `--addr` | `string` | `:8080` | Listen address (HTTP-like transports). |
 | `--watch` | `bool` | `false` | Watch config file and hot-reload on change. |
+| `-o, --once` | `string` | — | (stdio only) Send a single prompt, print the reply, then exit. |
+| `-v, --verbose` | `bool` | — | (stdio only) Print tool calls and intermediate steps. |
 
 
 #### agent validate
@@ -184,21 +207,6 @@ Start the config-authoring MCP assistant.
 ```
 smithy agent setup [flags]
 ```
-
-#### agent chat
-
-Chat with the configured agent (minimal stdio REPL).
-
-```
-smithy agent chat [flags]
-```
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `-c, --config` | `string` | `.agentsmithy.yaml` | Path to config. |
-| `-o, --once` | `string` | — | Single-shot input; print response and exit. |
-| `-v, --verbose` | `bool` | — | Print tool calls and intermediate steps. |
-
 
 ### stack
 

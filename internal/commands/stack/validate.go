@@ -18,6 +18,9 @@ type ValidateCmd struct {
 // then translates it so cross-field errors (relative-path resolution,
 // missing referenced configs) surface here instead of at launch time.
 func (c *ValidateCmd) Run(_ context.Context) error {
+	if err := c.EnsureExists(); err != nil {
+		return err
+	}
 	data, err := os.ReadFile(c.Config)
 	if err != nil {
 		return fmt.Errorf("stack: %w", err)

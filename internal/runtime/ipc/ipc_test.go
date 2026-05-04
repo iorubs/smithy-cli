@@ -35,11 +35,13 @@ func TestClientStatus(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc(PathStatus, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("content-type", "application/json")
-		_ = json.NewEncoder(w).Encode(StatusResponse{
+		if err := json.NewEncoder(w).Encode(StatusResponse{
 			Services: []StatusLine{
 				{Name: "a", Kind: KindMCP, State: StateRunning},
 			},
-		})
+		}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	})
 	newTestServer(t, sock, mux)
 
@@ -86,25 +88,34 @@ func TestClientStartService(t *testing.T) {
 	cases := []struct {
 		name string
 		kind Kind
+		path string
+		call func(*Client, context.Context, string, Kind) error
 	}{
-		{"svc-a", KindMCP},
-		{"svc-b", KindAgent},
+		{"start-mcp", KindMCP, PathStart, func(c *Client, ctx context.Context, n string, k Kind) error {
+			return c.StartService(ctx, n, k)
+		}},
+		{"start-agent", KindAgent, PathStart, func(c *Client, ctx context.Context, n string, k Kind) error {
+			return c.StartService(ctx, n, k)
+		}},
+		{"stop-mcp", KindMCP, PathStop, func(c *Client, ctx context.Context, n string, k Kind) error {
+			return c.StopService(ctx, n, k)
+		}},
 	}
 	dir := t.TempDir()
 	for i, tc := range cases {
-		t.Run(string(tc.kind), func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			var gotName, gotKind string
 			sock := sockPath(dir, fmt.Sprintf("st%d", i))
 			mux := http.NewServeMux()
-			mux.HandleFunc(PathStart, func(w http.ResponseWriter, r *http.Request) {
+			mux.HandleFunc(tc.path, func(w http.ResponseWriter, r *http.Request) {
 				gotName = r.URL.Query().Get("name")
 				gotKind = r.URL.Query().Get("kind")
 				w.WriteHeader(http.StatusAccepted)
 			})
 			newTestServer(t, sock, mux)
 
-			if err := NewClient(sock).StartService(t.Context(), tc.name, tc.kind); err != nil {
-				t.Fatalf("StartService: %v", err)
+			if err := tc.call(NewClient(sock), t.Context(), tc.name, tc.kind); err != nil {
+				t.Fatalf("call: %v", err)
 			}
 			if gotName != tc.name {
 				t.Errorf("name: got %q, want %q", gotName, tc.name)
@@ -113,28 +124,6 @@ func TestClientStartService(t *testing.T) {
 				t.Errorf("kind: got %q, want %q", gotKind, tc.kind)
 			}
 		})
-	}
-}
-
-func TestClientStopService(t *testing.T) {
-	var gotName, gotKind string
-	sock := sockPath(t.TempDir(), "s")
-	mux := http.NewServeMux()
-	mux.HandleFunc(PathStop, func(w http.ResponseWriter, r *http.Request) {
-		gotName = r.URL.Query().Get("name")
-		gotKind = r.URL.Query().Get("kind")
-		w.WriteHeader(http.StatusAccepted)
-	})
-	newTestServer(t, sock, mux)
-
-	if err := NewClient(sock).StopService(t.Context(), "my-svc", KindMCP); err != nil {
-		t.Fatalf("StopService: %v", err)
-	}
-	if gotName != "my-svc" {
-		t.Errorf("name: got %q, want my-svc", gotName)
-	}
-	if gotKind != "mcp" {
-		t.Errorf("kind: got %q, want mcp", gotKind)
 	}
 }
 

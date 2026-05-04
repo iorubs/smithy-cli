@@ -29,16 +29,22 @@ type UpCmd struct {
 
 // Run executes the up command.
 func (c *UpCmd) Run(ctx context.Context) error {
-	name, err := resolveStackName(c.Name, c.Config)
+	if err := c.EnsureValid(); err != nil {
+		return err
+	}
+	name, err := ResolveStackName(c.Name, c.Config)
 	if err != nil {
 		return fmt.Errorf("stack: %w", err)
 	}
 
-	pid, err := daemon.SpawnDetached(ctx, name, c.Config, spawnTimeout, true)
-	paths, _ := daemon.PathsFor(name)
+	_, err = daemon.SpawnDetached(ctx, name, c.Config, spawnTimeout, true)
+	paths, perr := daemon.PathsFor(name)
+	if perr != nil {
+		return fmt.Errorf("stack: %w", perr)
+	}
 	switch {
 	case errors.Is(err, daemon.ErrAlreadyRunning):
-		_ = pid // already running, attach silently
+		// already running; attach silently.
 	case errors.Is(err, daemon.ErrNameConflict):
 		return fmt.Errorf("stack: %w (pass a different name to run a second instance)", err)
 	case err != nil:
@@ -50,5 +56,5 @@ func (c *UpCmd) Run(ctx context.Context) error {
 	if c.Detach {
 		return nil
 	}
-	return tui.Run(paths.Socket, paths.DaemonLog, true)
+	return tui.Run(name, paths.Socket, paths.DaemonLog, true)
 }

@@ -7,44 +7,72 @@ import (
 )
 
 func TestValidateName(t *testing.T) {
-	ok := []string{"sample", "a", "0", "sample-prod", "api_v2", "abc123"}
-	for _, n := range ok {
-		if err := ValidateName(n); err != nil {
-			t.Errorf("ValidateName(%q) unexpected error: %v", n, err)
-		}
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"simple word", "sample", false},
+		{"single char", "a", false},
+		{"single digit", "0", false},
+		{"hyphenated", "sample-prod", false},
+		{"underscore", "api_v2", false},
+		{"alphanumeric", "abc123", false},
+		{"empty", "", true},
+		{"leading hyphen", "-leading", true},
+		{"leading underscore", "_leading", true},
+		{"uppercase", "Upper", true},
+		{"space", "with space", true},
+		{"slash", "with/slash", true},
+		{"dot", "with.dot", true},
+		{"too long", strings.Repeat("a", 65), true},
 	}
-	bad := []string{"", "-leading", "_leading", "Upper", "with space", "with/slash", "with.dot", strings.Repeat("a", 65)}
-	for _, n := range bad {
-		if err := ValidateName(n); err == nil {
-			t.Errorf("ValidateName(%q) should have errored", n)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateName(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateName(%q) error = %v; wantErr = %v", tt.input, err, tt.wantErr)
+			}
+		})
 	}
 }
 
 func TestPathsFor(t *testing.T) {
-	p, err := PathsFor("sample")
-	if err != nil {
-		t.Fatalf("PathsFor: %v", err)
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+	}{
+		{"valid name", "sample", false},
+		{"invalid name", "Bad Name", true},
 	}
-	if !filepath.IsAbs(p.Dir) {
-		t.Errorf("Dir not absolute: %q", p.Dir)
-	}
-	if filepath.Base(p.Dir) != "sample" {
-		t.Errorf("Dir basename = %q, want %q", filepath.Base(p.Dir), "sample")
-	}
-	if filepath.Base(p.Socket) != "daemon.sock" {
-		t.Errorf("Socket basename = %q", filepath.Base(p.Socket))
-	}
-	if filepath.Base(p.DaemonLog) != "daemon.log" {
-		t.Errorf("DaemonLog basename = %q", filepath.Base(p.DaemonLog))
-	}
-	if filepath.Base(p.Meta) != "stack.json" {
-		t.Errorf("Meta basename = %q", filepath.Base(p.Meta))
-	}
-}
-
-func TestPathsForRejectsInvalid(t *testing.T) {
-	if _, err := PathsFor("Bad Name"); err == nil {
-		t.Errorf("expected error for invalid name")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p, err := PathsFor(tt.input)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("PathsFor: %v", err)
+			}
+			if !filepath.IsAbs(p.Dir) {
+				t.Errorf("Dir not absolute: %q", p.Dir)
+			}
+			if filepath.Base(p.Dir) != tt.input {
+				t.Errorf("Dir basename = %q, want %q", filepath.Base(p.Dir), tt.input)
+			}
+			if filepath.Base(p.Socket) != "daemon.sock" {
+				t.Errorf("Socket basename = %q", filepath.Base(p.Socket))
+			}
+			if filepath.Base(p.DaemonLog) != "daemon.log" {
+				t.Errorf("DaemonLog basename = %q", filepath.Base(p.DaemonLog))
+			}
+			if filepath.Base(p.Meta) != "stack.json" {
+				t.Errorf("Meta basename = %q", filepath.Base(p.Meta))
+			}
+		})
 	}
 }

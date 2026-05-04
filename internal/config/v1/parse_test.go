@@ -78,6 +78,53 @@ mcps:
 			wantErr: "is required",
 		},
 		{
+			name: "agent only",
+			yaml: `
+version: "1"
+agents:
+  primary:
+    config: ./.agentsmithy.yaml
+    transport: a2a
+    addr: 127.0.0.1:8081
+`,
+			check: func(t *testing.T, c *Config) {
+				a, ok := c.Agents["primary"]
+				if !ok {
+					t.Fatalf("missing agents.primary")
+				}
+				if a.Config != "./.agentsmithy.yaml" {
+					t.Errorf("config = %q", a.Config)
+				}
+				if a.Transport != AgentTransportA2A {
+					t.Errorf("transport = %q", a.Transport)
+				}
+				if a.Addr != "127.0.0.1:8081" {
+					t.Errorf("addr = %q", a.Addr)
+				}
+			},
+		},
+		{
+			name: "missing required agent config",
+			yaml: `
+version: "1"
+agents:
+  bad:
+    transport: a2a
+`,
+			wantErr: "is required",
+		},
+		{
+			name: "invalid agent transport",
+			yaml: `
+version: "1"
+agents:
+  bad:
+    config: ./a.yaml
+    transport: grpc
+`,
+			wantErr: "must be one of",
+		},
+		{
 			name: "invalid transport",
 			yaml: `
 version: "1"

@@ -28,7 +28,7 @@ type LogsCmd struct {
 
 // Run executes the logs command.
 func (c *LogsCmd) Run(ctx context.Context) error {
-	name, err := resolveStackName(c.Name, c.Config)
+	name, err := ResolveStackName(c.Name, c.Config)
 	if err != nil {
 		return fmt.Errorf("stack: %w", err)
 	}
@@ -41,7 +41,7 @@ func (c *LogsCmd) Run(ctx context.Context) error {
 	}
 
 	if !c.JSON {
-		return tui.Run(paths.Socket, paths.DaemonLog, false)
+		return tui.Run(name, paths.Socket, paths.DaemonLog, false)
 	}
 
 	f, err := os.Open(paths.DaemonLog)

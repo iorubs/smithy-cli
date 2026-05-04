@@ -13,8 +13,6 @@ import (
 	"github.com/iorubs/smithy-cli/internal/tui"
 )
 
-const mcpSpawnTimeout = 10 * time.Second
-
 // MCPCmd groups all mcpsmithy subcommands plus smithy's own per-service
 // start/stop which route through the stack daemon.
 type MCPCmd struct {
@@ -33,6 +31,9 @@ type MCPUpCmd struct {
 
 // Run executes mcp up.
 func (m *MCPUpCmd) Run(ctx context.Context) error {
+	if err := m.EnsureValid(); err != nil {
+		return err
+	}
 	stackName, err := daemon.DeriveName(m.Config)
 	if err != nil {
 		return fmt.Errorf("mcp up: %w", err)
@@ -42,15 +43,13 @@ func (m *MCPUpCmd) Run(ctx context.Context) error {
 		return fmt.Errorf("mcp up: %w", err)
 	}
 
-	pid, err := daemon.SpawnDetached(ctx, stackName, m.Config, mcpSpawnTimeout, false)
+	_, err = daemon.SpawnDetached(ctx, stackName, m.Config, daemon.SpawnTimeout, false)
 	switch {
 	case errors.Is(err, daemon.ErrAlreadyRunning):
 	case errors.Is(err, daemon.ErrNameConflict):
 		return fmt.Errorf("mcp up: %w", err)
 	case err != nil:
 		return fmt.Errorf("mcp up: spawn daemon: %w", err)
-	default:
-		_ = pid // daemon started silently
 	}
 
 	if err := ipc.NewClient(paths.Socket).StartService(ctx, m.Name, ipc.KindMCP); err != nil {
@@ -60,7 +59,7 @@ func (m *MCPUpCmd) Run(ctx context.Context) error {
 		fmt.Printf(" Started  %s\n", m.Name)
 		return nil
 	}
-	return tui.Run(paths.Socket, paths.DaemonLog, false)
+	return tui.Run(stackName, paths.Socket, paths.DaemonLog, false)
 }
 
 // MCPDownCmd stops a single named MCP server in the stack daemon without affecting other services.

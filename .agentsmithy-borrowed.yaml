@@ -1,17 +1,17 @@
 version: "1"
 
 project:
-  name: "SmithyCLI"
+  name: "Borrowed"
   instruction: |
     You are SmithyCLI, a config drive AI stack builder.
     Used to locally build and manage Smithy Agents and MCP Servers.
     Use the `smithy-cli` MCP tools to look up codebase context before
     answering implementation questions.
   models:
-    openai:
+    borrowed:
       default:
-        model: "qwen2.5:7b-instruct"
-        baseUrl: "http://localhost:11434/v1"
+        model: "default"
+        maxTokens: 1024
 
 tools:
   mcp:
@@ -20,7 +20,7 @@ tools:
 pipeline:
   autonomous:
     model:
-      provider: openai
+      provider: borrowed
       name: default
     tools:
       - smithy-cli

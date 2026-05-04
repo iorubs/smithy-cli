@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -37,5 +38,8 @@ func main() {
 	ctx = runtime.WithLogLevel(ctx, c.LogLevel)
 	kctx.BindTo(ctx, (*context.Context)(nil))
 
-	kctx.FatalIfErrorf(kctx.Run(&c))
+	if err := kctx.Run(&c); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
