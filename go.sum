@@ -75,6 +75,10 @@ github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aN
 github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/hexops/gotextdiff v1.0.3 h1:gitA9+qJrrTCsiCl7+kh75nPqQt1cx4ZkudSTLoUqJM=
 github.com/hexops/gotextdiff v1.0.3/go.mod h1:pSWU5MAI3yDq+fZBTazCSJysOMbxWL1BSow5/V2vxeg=
+github.com/iorubs/agentsmithy v0.1.0-rc1 h1:l4Jes41FK8q7HNjlRPylfcW+I5pl0sZ1evKPlPJ1/nU=
+github.com/iorubs/agentsmithy v0.1.0-rc1/go.mod h1:98Py7Hg3v/VuQp9iP0fedJizckocReheI/4hS97dmAw=
+github.com/iorubs/mcpsmithy v0.1.0-rc3 h1:VNgmxtPtjfbo227oy8RnGSluky46frWlAS/iK2ZrMaQ=
+github.com/iorubs/mcpsmithy v0.1.0-rc3/go.mod h1:o7QvZ/7yZqdSROjVT5D/UTkP1ArScyWf/R7q0AQ0ycI=
 github.com/lucasb-eyer/go-colorful v1.3.0 h1:2/yBRLdWBZKrf7gB40FoiKfAWYQ0lqNcbuQwVHXptag=
 github.com/lucasb-eyer/go-colorful v1.3.0/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
 github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWEY=
