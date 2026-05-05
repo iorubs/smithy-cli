@@ -91,11 +91,13 @@ const config = {
             href: 'https://iorubs.github.io/mcpsmithy/',
             label: 'MCPSmithy',
             position: 'left',
+            target: '_self',
           },
           {
             href: 'https://iorubs.github.io/agentsmithy/',
             label: 'AgentSmithy',
             position: 'left',
+            target: '_self',
           },
           {
             href: 'https://github.com/iorubs/smithy-cli',
