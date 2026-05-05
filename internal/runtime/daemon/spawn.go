@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/iorubs/smithy-cli/internal/runtime"
@@ -79,7 +78,7 @@ func SpawnDetached(ctx context.Context, name, stackPath string, timeout time.Dur
 	cmd.Stdin = nil
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	setSysProcAttr(cmd)
 
 	if err := cmd.Start(); err != nil {
 		return 0, fmt.Errorf("daemon: start child: %w", err)
