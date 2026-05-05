@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "smithy-setup": {
+      "command": "${workspaceFolder}/smithy",
+      "args": ["stack", "setup"]
+    }
+  }
+}

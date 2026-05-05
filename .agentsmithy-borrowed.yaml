@@ -1,0 +1,26 @@
+version: "1"
+
+project:
+  name: "Borrowed"
+  instruction: |
+    You are SmithyCLI, a config drive AI stack builder.
+    Used to locally build and manage Smithy Agents and MCP Servers.
+    Use the `smithy-cli` MCP tools to look up codebase context before
+    answering implementation questions.
+  models:
+    borrowed:
+      default:
+        model: "default"
+        maxTokens: 1024
+
+tools:
+  mcp:
+    smithy-cli: "http://127.0.0.1:8080/"
+
+pipeline:
+  autonomous:
+    model:
+      provider: borrowed
+      name: default
+    tools:
+      - smithy-cli
