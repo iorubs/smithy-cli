@@ -224,8 +224,8 @@ func TestServiceManager(t *testing.T) {
 		if n != 1 {
 			t.Errorf("expected 1 call, got %d", n)
 		}
-		if snap := st.snapshot(); snap.Services[0].State != ipc.StateStopped {
-			t.Errorf("expected stopped, got %q", snap.Services[0].State)
+		if snap := st.snapshot(); snap.Services[0].State != ipc.StateFailed {
+			t.Errorf("expected failed, got %q", snap.Services[0].State)
 		}
 	})
 

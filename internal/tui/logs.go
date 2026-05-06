@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 // prettifyLogs reformats each slog JSON line as a coloured
@@ -15,7 +17,7 @@ import (
 // svcKind maps service name → kind (mcp/agent/daemon). When a log's
 // "kind" field is not a known service kind (e.g. kind=local from an
 // indexer), the service's kind is resolved from this map instead.
-func prettifyLogs(s string, svcKind map[string]string) string {
+func prettifyLogs(s string, svcKind map[string]string, width int) string {
 	if s == "" {
 		return s
 	}
@@ -29,12 +31,12 @@ func prettifyLogs(s string, svcKind map[string]string) string {
 		if err := json.Unmarshal([]byte(trim), &fields); err != nil {
 			continue
 		}
-		lines[i] = formatLogFields(fields, svcKind)
+		lines[i] = formatLogFields(fields, svcKind, width)
 	}
 	return strings.Join(lines, "\n")
 }
 
-func formatLogFields(fields map[string]any, svcKind map[string]string) string {
+func formatLogFields(fields map[string]any, svcKind map[string]string, width int) string {
 	skip := map[string]bool{"time": true, "level": true, "msg": true, "service": true, "kind": true}
 	var b strings.Builder
 
@@ -114,5 +116,13 @@ func formatLogFields(fields map[string]any, svcKind map[string]string) string {
 		b.WriteString(fmt.Sprint(fields[k]))
 	}
 
-	return b.String()
+	line := b.String()
+	if width > 0 {
+		usable := width - lipgloss.NewStyle().GetHorizontalFrameSize()
+		if usable < 20 {
+			usable = 20
+		}
+		line = lipgloss.NewStyle().Width(usable).Render(line)
+	}
+	return line
 }

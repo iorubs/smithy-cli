@@ -15,7 +15,7 @@ import (
 
 // chatTurn is one message in the visible transcript.
 type chatTurn struct {
-	from string // "you", "agent", "system"
+	from string
 	text string
 }
 
@@ -198,8 +198,10 @@ func (m *chatModel) redraw() {
 			)
 			b.WriteString(lipgloss.PlaceHorizontal(width, lipgloss.Left, block))
 		case "system":
-			b.WriteString(lipgloss.PlaceHorizontal(width, lipgloss.Center,
-				styleMuted.Render("◆ "+t.text)))
+			msg := lipgloss.NewStyle().
+				MaxWidth(bubbleMax).
+				Render("◆ " + t.text)
+			b.WriteString(lipgloss.PlaceHorizontal(width, lipgloss.Center, styleMuted.Render(msg)))
 		}
 		b.WriteString("\n")
 	}

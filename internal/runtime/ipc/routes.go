@@ -19,8 +19,10 @@ type State string
 
 // Service states.
 const (
-	StateRunning State = "running"
-	StateStopped State = "stopped"
+	StateRunning  State = "running"
+	StateStopped  State = "stopped"
+	StateFinished State = "finished"
+	StateFailed   State = "failed"
 )
 
 // Kind identifies the type of service (mcp, agent, …).
@@ -34,9 +36,10 @@ const (
 
 // StatusLine is one row in the response to GET /status.
 type StatusLine struct {
-	Name  string `json:"name"`
-	Kind  Kind   `json:"kind"`
-	State State  `json:"state"`
+	Name      string `json:"name"`
+	Kind      Kind   `json:"kind"`
+	State     State  `json:"state"`
+	Transport string `json:"transport,omitempty"`
 }
 
 // StatusResponse is the JSON body returned by GET /status.

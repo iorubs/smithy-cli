@@ -77,6 +77,16 @@ func (m Model) cmdReadLogs() tea.Cmd {
 	}
 }
 
+func (m Model) cmdStartService(name string) tea.Cmd {
+	c := m.client
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		_ = c.StartService(ctx, name, ipc.KindAgent)
+		return nil
+	}
+}
+
 func (m *Model) resizeVP() {
 	if !m.logReady || m.width == 0 || m.height == 0 {
 		return
@@ -97,7 +107,7 @@ func (m *Model) setLogs(raw string) {
 		svcKind[r.Name] = string(r.Kind)
 	}
 	prevOffset := m.logVP.YOffset
-	m.logVP.SetContent(prettifyLogs(raw, svcKind))
+	m.logVP.SetContent(prettifyLogs(raw, svcKind, m.logVP.Width))
 	if m.userScroll {
 		m.logVP.SetYOffset(prevOffset)
 	} else {
@@ -116,6 +126,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.logReady = true
 		}
 		m.resizeVP()
+		if m.logReady && m.lastLogs != "" {
+			m.setLogs(m.lastLogs)
+		}
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -133,9 +146,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "c", "enter":
 			if m.cursor < len(m.rows) {
 				row := m.rows[m.cursor]
-				if row.Kind == ipc.KindAgent && row.State == ipc.StateRunning {
+				if row.Kind == ipc.KindAgent && row.State == ipc.StateRunning &&
+					(row.Transport == "a2a" || row.Transport == "mcp-http") {
 					m.chatTarget = row.Name
 					return m, tea.Quit
+				}
+				if row.Kind == ipc.KindAgent && row.Transport == "none" &&
+					(row.State == ipc.StateFinished || row.State == ipc.StateStopped || row.State == ipc.StateFailed) {
+					return m, m.cmdStartService(row.Name)
 				}
 			}
 		case "pgup", "b":
@@ -254,10 +272,20 @@ func (m Model) View() string {
 	}
 
 	b.WriteString("\n")
+	action := ""
+	if m.cursor < len(m.rows) {
+		row := m.rows[m.cursor]
+		if row.Kind == ipc.KindAgent && (row.Transport == "a2a" || row.Transport == "mcp-http") && row.State == ipc.StateRunning {
+			action = "enter chat   "
+		} else if row.Kind == ipc.KindAgent && row.Transport == "none" &&
+			(row.State == ipc.StateFinished || row.State == ipc.StateStopped || row.State == ipc.StateFailed) {
+			action = "enter run   "
+		}
+	}
 	if m.detach {
-		b.WriteString(styleMuted.Render("  ↑/↓ select   c/enter chat   b/space scroll   g/G top/bottom   Q detach"))
+		b.WriteString(styleMuted.Render("  ↑/↓ select   " + action + "b/space scroll   g/G top/bottom   Q detach"))
 	} else {
-		b.WriteString(styleMuted.Render("  ↑/↓ select   c/enter chat   b/space scroll   g/G top/bottom   Q quit"))
+		b.WriteString(styleMuted.Render("  ↑/↓ select   " + action + "b/space scroll   g/G top/bottom   Q quit"))
 	}
 	return b.String()
 }

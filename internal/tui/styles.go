@@ -6,6 +6,8 @@ var (
 	styleTitle      = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#7C3AED"))
 	styleRunning    = lipgloss.NewStyle().Foreground(lipgloss.Color("#10B981"))
 	styleStopped    = lipgloss.NewStyle().Foreground(lipgloss.Color("#6B7280"))
+	styleFinished   = lipgloss.NewStyle().Foreground(lipgloss.Color("#60A5FA"))
+	styleFailed     = lipgloss.NewStyle().Foreground(lipgloss.Color("#EF4444"))
 	styleFatal      = lipgloss.NewStyle().Foreground(lipgloss.Color("#EF4444"))
 	styleMuted      = lipgloss.NewStyle().Foreground(lipgloss.Color("#9CA3AF")).Italic(true)
 	styleHeader     = lipgloss.NewStyle().Bold(true).Underline(true)

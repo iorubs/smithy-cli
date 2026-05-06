@@ -48,6 +48,8 @@ type AgentSpec struct {
 	// Addr is the listen address ("host:port") for http-like
 	// transports; empty for stdio variants or when unset.
 	Addr string
+	// AutoStart controls whether the agent starts with the stack.
+	AutoStart bool
 	// AutoRestart is the resolved restart policy (nil → true).
 	AutoRestart bool
 }
@@ -119,9 +121,19 @@ func Translate(cfg *v1.Config, stackPath string) (Plan, error) {
 			return Plan{}, fmt.Errorf("agent %q: %w", name, err)
 		}
 
+		autoStart := true
+		if agent.AutoStart != nil {
+			autoStart = *agent.AutoStart
+		} else if agent.Transport == v1.AgentTransportNone {
+			autoStart = false
+		}
+
 		autoRestart := true
 		if agent.AutoRestart != nil {
 			autoRestart = *agent.AutoRestart
+		}
+		if agent.Transport == v1.AgentTransportNone {
+			autoRestart = false
 		}
 
 		agentSpecs = append(agentSpecs, AgentSpec{
@@ -129,6 +141,7 @@ func Translate(cfg *v1.Config, stackPath string) (Plan, error) {
 			ConfigPath:  path,
 			Transport:   string(agent.Transport),
 			Addr:        agent.Addr,
+			AutoStart:   autoStart,
 			AutoRestart: autoRestart,
 		})
 	}

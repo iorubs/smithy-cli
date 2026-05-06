@@ -26,6 +26,10 @@ func colorState(s string, width int) string {
 	switch s {
 	case "running":
 		return styleRunning.Render(padded)
+	case "finished":
+		return styleFinished.Render(padded)
+	case "failed":
+		return styleFailed.Render(padded)
 	default:
 		return styleStopped.Render(padded)
 	}

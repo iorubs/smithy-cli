@@ -237,16 +237,22 @@ func newStateTable(plan runtime.Plan, initialState ipc.State) *stateTable {
 	t := &stateTable{}
 	for _, m := range plan.MCPs {
 		t.rows = append(t.rows, ipc.StatusLine{
-			Name:  m.Name,
-			Kind:  ipc.KindMCP,
-			State: initialState,
+			Name:      m.Name,
+			Kind:      ipc.KindMCP,
+			State:     initialState,
+			Transport: m.Transport,
 		})
 	}
 	for _, a := range plan.Agents {
+		initial := initialState
+		if !a.AutoStart && initialState == ipc.StateRunning {
+			initial = ipc.StateStopped
+		}
 		t.rows = append(t.rows, ipc.StatusLine{
-			Name:  a.Name,
-			Kind:  ipc.KindAgent,
-			State: initialState,
+			Name:      a.Name,
+			Kind:      ipc.KindAgent,
+			State:     initial,
+			Transport: a.Transport,
 		})
 	}
 	return t
@@ -287,6 +293,7 @@ type serviceManager struct {
 // captures the typed spec and the runner that knows how to drive it,
 // so the manager can treat MCPs and agents uniformly.
 type serviceEntry struct {
+	autoStart   bool
 	autoRestart bool
 	run         func(ctx context.Context) error
 }
@@ -306,6 +313,7 @@ func newServiceManagerWithRunners(
 	}
 	for _, spec := range plan.MCPs {
 		sm.entries[spec.Name] = serviceEntry{
+			autoStart:   true,
 			autoRestart: spec.AutoRestart,
 			run: func(ctx context.Context) error {
 				return mcpRunner(ctx, spec, os.Stdout, os.Stderr)
@@ -315,6 +323,7 @@ func newServiceManagerWithRunners(
 	}
 	for _, spec := range plan.Agents {
 		sm.entries[spec.Name] = serviceEntry{
+			autoStart:   spec.AutoStart,
 			autoRestart: spec.AutoRestart,
 			run: func(ctx context.Context) error {
 				if agentRunner == nil {
@@ -350,15 +359,26 @@ func (sm *serviceManager) start(ctx context.Context, name string) error {
 		for {
 			err := entry.run(svcCtx)
 			if err == nil {
-				slog.InfoContext(ctx, "daemon: service finished", "service", name)
-				break
+				if svcCtx.Err() != nil {
+					break
+				}
+				slog.DebugContext(ctx, "daemon: service finished", "service", name)
+				sm.mu.Lock()
+				delete(sm.cancels, name)
+				sm.mu.Unlock()
+				sm.state.setState(name, ipc.StateFinished)
+				return
 			}
 			if svcCtx.Err() != nil {
 				break
 			}
-			slog.WarnContext(ctx, "daemon: service exited with error", "service", name, "error", err)
+			slog.DebugContext(ctx, "daemon: service exited with error", "service", name, "error", err)
 			if !entry.autoRestart {
-				break
+				sm.mu.Lock()
+				delete(sm.cancels, name)
+				sm.mu.Unlock()
+				sm.state.setState(name, ipc.StateFailed)
+				return
 			}
 			select {
 			case <-time.After(restartDelay):
@@ -390,6 +410,9 @@ func (sm *serviceManager) stop(name string) {
 // startAll starts every registered service in plan order.
 func (sm *serviceManager) startAll(ctx context.Context) {
 	for _, name := range sm.names {
+		if !sm.entries[name].autoStart {
+			continue
+		}
 		if err := sm.start(ctx, name); err != nil {
 			slog.WarnContext(ctx, "daemon: failed to start service", "service", name, "error", err)
 		}

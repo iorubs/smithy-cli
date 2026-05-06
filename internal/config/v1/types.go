@@ -50,6 +50,9 @@ type Agent struct {
 	// Listen address (host:port) for http-like transports. Mirrors
 	// agentsmithy's --addr flag. Ignored for stdio transports.
 	Addr string `yaml:"addr,omitempty"`
+	// AutoStart controls whether the agent starts with the stack.
+	// Defaults to true for server transports, false for none.
+	AutoStart *bool `yaml:"autostart,omitempty"`
 	// Restart on non-zero exit. Defaults to true when unset; set false
 	// to opt out per-entry (one-shot or hand-managed agents).
 	AutoRestart *bool `yaml:"autorestart,omitempty"`
@@ -84,6 +87,9 @@ const (
 	AgentTransportMCPStdio AgentTransport = "mcp-stdio"
 	// AgentTransportStdio runs the agent's line REPL over stdio.
 	AgentTransportStdio AgentTransport = "stdio"
+	// AgentTransportNone runs the agent once (no server). Suitable for
+	// one-shot or cron-triggered agents.
+	AgentTransportNone AgentTransport = "none"
 )
 
 // Values lists the allowed agent transport strings.
@@ -93,5 +99,6 @@ func (AgentTransport) Values() []string {
 		string(AgentTransportMCPHTTP),
 		string(AgentTransportMCPStdio),
 		string(AgentTransportStdio),
+		string(AgentTransportNone),
 	}
 }

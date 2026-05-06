@@ -126,7 +126,7 @@ func TestPrettifyLogs(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := prettifyLogs(tc.input, tc.svcKind)
+			got := prettifyLogs(tc.input, tc.svcKind, 0)
 			for _, want := range tc.wantContain {
 				if !strings.Contains(got, want) {
 					t.Errorf("output missing %q: %q", want, got)

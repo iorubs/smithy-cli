@@ -62,110 +62,103 @@ func stripANSI(s string) string {
 	return b.String()
 }
 
-// TestChat_InitialView shows the header and agent name once the
-// window-size handshake completes.
-func TestChat_InitialView(t *testing.T) {
-	m := boot(t, &fakeChatClient{})
-	view := stripANSI(m.View())
-	if !strings.Contains(view, "chat: demo-agent") {
-		t.Errorf("view missing header; got: %q", view)
-	}
-}
-
-// TestChat_HistoryLoads prepends server-side transcript turns when
-// FetchHistory returns content.
-func TestChat_HistoryLoads(t *testing.T) {
-	client := &fakeChatClient{
-		HistoryFn: func() ([]agentchat.Turn, error) {
-			return []agentchat.Turn{
+func TestChat(t *testing.T) {
+	tests := []struct {
+		name    string
+		setup   func(m *chatModel)
+		msg     tea.Msg
+		want    []string
+		notWant []string
+		check   func(t *testing.T, m chatModel, cmd tea.Cmd)
+	}{
+		{
+			name: "initial view shows header",
+			want: []string{"chat: demo-agent"},
+		},
+		{
+			name: "history loads prior turns",
+			msg: chatHistoryMsg{turns: []agentchat.Turn{
 				{From: "you", Text: "earlier question"},
 				{From: "agent", Text: "earlier reply"},
-			}, nil
+			}},
+			want: []string{"earlier question", "earlier reply"},
+		},
+		{
+			name: "history error surfaces system note",
+			msg:  chatHistoryMsg{err: errors.New("boom")},
+			want: []string{"history unavailable", "boom"},
+		},
+		{
+			name: "reply appends agent turn and clears thinking",
+			setup: func(m *chatModel) {
+				m.thinking = true
+				m.turns = append(m.turns, chatTurn{from: "you", text: "hi"})
+			},
+			msg:  chatReplyMsg{text: "hello back"},
+			want: []string{"hello back"},
+			check: func(t *testing.T, m chatModel, _ tea.Cmd) {
+				if m.thinking {
+					t.Error("thinking flag still set after reply")
+				}
+			},
+		},
+		{
+			name: "reply error clears thinking and shows error",
+			setup: func(m *chatModel) {
+				m.thinking = true
+			},
+			msg:  chatReplyMsg{err: errors.New("transport down")},
+			want: []string{"transport down"},
+			check: func(t *testing.T, m chatModel, _ tea.Cmd) {
+				if m.thinking {
+					t.Error("thinking flag still set after error reply")
+				}
+			},
+		},
+		{
+			name: "empty reply shows placeholder",
+			setup: func(m *chatModel) {
+				m.thinking = true
+			},
+			msg:  chatReplyMsg{text: "   "},
+			want: []string{"(empty reply)"},
+		},
+		{
+			name: "ctrl+c returns quit command",
+			msg:  tea.KeyMsg{Type: tea.KeyCtrlC},
+			check: func(t *testing.T, _ chatModel, cmd tea.Cmd) {
+				if cmd == nil {
+					t.Fatal("expected non-nil cmd on ctrl+c")
+				}
+				if _, ok := cmd().(tea.QuitMsg); !ok {
+					t.Errorf("expected tea.QuitMsg, got %T", cmd())
+				}
+			},
 		},
 	}
-	m := boot(t, client)
-	updated, _ := m.Update(chatHistoryMsg{turns: []agentchat.Turn{
-		{From: "you", Text: "earlier question"},
-		{From: "agent", Text: "earlier reply"},
-	}})
-	view := stripANSI(updated.(chatModel).View())
-	if !strings.Contains(view, "earlier question") {
-		t.Errorf("view missing prior user turn; got: %q", view)
-	}
-	if !strings.Contains(view, "earlier reply") {
-		t.Errorf("view missing prior agent turn; got: %q", view)
-	}
-}
 
-// TestChat_HistoryError surfaces the error as a system message but
-// doesn't abort the model.
-func TestChat_HistoryError(t *testing.T) {
-	m := boot(t, &fakeChatClient{})
-	updated, _ := m.Update(chatHistoryMsg{err: errors.New("boom")})
-	view := stripANSI(updated.(chatModel).View())
-	if !strings.Contains(view, "history unavailable") {
-		t.Errorf("view missing history-error system note; got: %q", view)
-	}
-	if !strings.Contains(view, "boom") {
-		t.Errorf("view missing original error text; got: %q", view)
-	}
-}
-
-// TestChat_ReplyAppendsAgentTurn renders the agent reply once the
-// command's chatReplyMsg arrives.
-func TestChat_ReplyAppendsAgentTurn(t *testing.T) {
-	m := boot(t, &fakeChatClient{})
-	m.thinking = true
-	m.turns = append(m.turns, chatTurn{from: "you", text: "hi"})
-
-	updated, _ := m.Update(chatReplyMsg{text: "hello back"})
-	cm := updated.(chatModel)
-	if cm.thinking {
-		t.Error("thinking flag still set after reply")
-	}
-	view := stripANSI(cm.View())
-	if !strings.Contains(view, "hello back") {
-		t.Errorf("view missing agent reply; got: %q", view)
-	}
-}
-
-// TestChat_ReplyError renders an error system bubble and clears the
-// thinking flag.
-func TestChat_ReplyError(t *testing.T) {
-	m := boot(t, &fakeChatClient{})
-	m.thinking = true
-	updated, _ := m.Update(chatReplyMsg{err: errors.New("transport down")})
-	cm := updated.(chatModel)
-	if cm.thinking {
-		t.Error("thinking flag still set after error reply")
-	}
-	view := stripANSI(cm.View())
-	if !strings.Contains(view, "transport down") {
-		t.Errorf("view missing error text; got: %q", view)
-	}
-}
-
-// TestChat_EmptyReply substitutes a placeholder when the model
-// returns blank text so the user sees that the round-trip completed.
-func TestChat_EmptyReply(t *testing.T) {
-	m := boot(t, &fakeChatClient{})
-	m.thinking = true
-	updated, _ := m.Update(chatReplyMsg{text: "   "})
-	view := stripANSI(updated.(chatModel).View())
-	if !strings.Contains(view, "(empty reply)") {
-		t.Errorf("view missing empty-reply placeholder; got: %q", view)
-	}
-}
-
-// TestChat_CtrlCQuits returns tea.Quit on ctrl+c.
-func TestChat_CtrlCQuits(t *testing.T) {
-	m := boot(t, &fakeChatClient{})
-	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
-	if cmd == nil {
-		t.Fatal("expected non-nil cmd on ctrl+c")
-	}
-	msg := cmd()
-	if _, ok := msg.(tea.QuitMsg); !ok {
-		t.Errorf("expected tea.QuitMsg, got %T", msg)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			m := boot(t, &fakeChatClient{})
+			if tc.setup != nil {
+				tc.setup(&m)
+			}
+			updated, cmd := m.Update(tc.msg)
+			cm := updated.(chatModel)
+			view := stripANSI(cm.View())
+			for _, want := range tc.want {
+				if !strings.Contains(view, want) {
+					t.Errorf("view missing %q; got: %q", want, view)
+				}
+			}
+			for _, notWant := range tc.notWant {
+				if strings.Contains(view, notWant) {
+					t.Errorf("view unexpectedly contains %q; got: %q", notWant, view)
+				}
+			}
+			if tc.check != nil {
+				tc.check(t, cm, cmd)
+			}
+		})
 	}
 }
