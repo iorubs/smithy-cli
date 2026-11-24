@@ -14,7 +14,7 @@ and agents together.
 ## Quick Start
 
 ```bash
-# From source (Go 1.26+)
+# From source (Go 1.27+)
 go build -o bin/smithy ./cmd/smithy
 
 # Single MCP server

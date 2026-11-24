@@ -9,10 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/a2aproject/a2a-go/a2a"
-	"github.com/a2aproject/a2a-go/a2aclient"
+	"github.com/a2aproject/a2a-go/v2/a2a"
+	"github.com/a2aproject/a2a-go/v2/a2aclient"
 	"github.com/iorubs/smithy-cli/internal/runtime/daemon"
 )
+
+// a2aV1Path is where agentsmithy serves the A2A v1.0 JSON-RPC binding.
+const a2aV1Path = "/a2a/v1"
 
 // Turn is one entry in the chat transcript.
 type Turn struct {
@@ -50,15 +53,15 @@ func newA2AClient(ctx context.Context, target AgentTarget, reset bool) (*a2aClie
 		contextID = meta.Chats[target.Name]
 	}
 
-	cardURL := strings.TrimSuffix(target.BaseURL, "/") + "/"
+	// agentsmithy serves A2A v1.0 JSON-RPC at /a2a/v1 (v0.3 stays at /
+	// for older clients). Agents run in-process from the same
+	// agentsmithy version, so the v1.0 endpoint is always available.
+	rpcURL := strings.TrimSuffix(target.BaseURL, "/") + a2aV1Path
 	card := &a2a.AgentCard{
-		Name:               target.Name,
-		URL:                cardURL,
-		Version:            "1.0.0",
-		ProtocolVersion:    "0.2.0",
-		PreferredTransport: a2a.TransportProtocolJSONRPC,
-		AdditionalInterfaces: []a2a.AgentInterface{
-			{Transport: a2a.TransportProtocolJSONRPC, URL: cardURL},
+		Name:    target.Name,
+		Version: "1.0.0",
+		SupportedInterfaces: []*a2a.AgentInterface{
+			{URL: rpcURL, ProtocolBinding: a2a.TransportProtocolJSONRPC, ProtocolVersion: a2a.Version},
 		},
 	}
 	factory := a2aclient.NewFactory(
@@ -137,13 +140,9 @@ func (c *a2aClient) FetchHistory(ctx context.Context) ([]Turn, error) {
 // on stack shutdown, so contextIDs auto-clear when the in-memory
 // agent sessions they reference are gone too.
 func (c *a2aClient) SendText(ctx context.Context, text string) (string, error) {
-	msg := &a2a.Message{
-		ID:        a2a.NewMessageID(),
-		Role:      a2a.MessageRoleUser,
-		ContextID: c.contextID,
-		Parts:     []a2a.Part{a2a.TextPart{Text: text}},
-	}
-	resp, err := c.a2a.SendMessage(ctx, &a2a.MessageSendParams{Message: msg})
+	msg := a2a.NewMessage(a2a.MessageRoleUser, a2a.NewTextPart(text))
+	msg.ContextID = c.contextID
+	resp, err := c.a2a.SendMessage(ctx, &a2a.SendMessageRequest{Message: msg})
 	if err != nil {
 		return "", fmt.Errorf("a2a send: %w", err)
 	}
@@ -183,11 +182,11 @@ func extractText(resp a2a.SendMessageResult) string {
 	return ""
 }
 
-func textOfParts(parts []a2a.Part) string {
+func textOfParts(parts a2a.ContentParts) string {
 	var b strings.Builder
 	for _, p := range parts {
-		if tp, ok := p.(a2a.TextPart); ok {
-			b.WriteString(tp.Text)
+		if p != nil {
+			b.WriteString(p.Text())
 		}
 	}
 	return b.String()
