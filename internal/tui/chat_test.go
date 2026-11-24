@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/iorubs/smithy-cli/internal/agentchat"
 )
 
@@ -125,7 +125,7 @@ func TestChat(t *testing.T) {
 		},
 		{
 			name: "ctrl+c returns quit command",
-			msg:  tea.KeyMsg{Type: tea.KeyCtrlC},
+			msg:  tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl},
 			check: func(t *testing.T, _ chatModel, cmd tea.Cmd) {
 				if cmd == nil {
 					t.Fatal("expected non-nil cmd on ctrl+c")
@@ -145,7 +145,7 @@ func TestChat(t *testing.T) {
 			}
 			updated, cmd := m.Update(tc.msg)
 			cm := updated.(chatModel)
-			view := stripANSI(cm.View())
+			view := stripANSI(cm.View().Content)
 			for _, want := range tc.want {
 				if !strings.Contains(view, want) {
 					t.Errorf("view missing %q; got: %q", want, view)

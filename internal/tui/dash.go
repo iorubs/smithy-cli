@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 
 	"github.com/iorubs/smithy-cli/internal/agentchat"
 	"github.com/iorubs/smithy-cli/internal/runtime/ipc"
@@ -97,8 +97,8 @@ func (m *Model) resizeVP() {
 	if avail < 3 {
 		avail = 3
 	}
-	m.logVP.Width = m.width - 2
-	m.logVP.Height = avail
+	m.logVP.SetWidth(m.width - 2)
+	m.logVP.SetHeight(avail)
 }
 
 func (m *Model) setLogs(raw string) {
@@ -106,8 +106,8 @@ func (m *Model) setLogs(raw string) {
 	for _, r := range m.rows {
 		svcKind[r.Name] = string(r.Kind)
 	}
-	prevOffset := m.logVP.YOffset
-	m.logVP.SetContent(prettifyLogs(raw, svcKind, m.logVP.Width))
+	prevOffset := m.logVP.YOffset()
+	m.logVP.SetContent(prettifyLogs(raw, svcKind, m.logVP.Width()))
 	if m.userScroll {
 		m.logVP.SetYOffset(prevOffset)
 	} else {
@@ -122,7 +122,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		if !m.logReady {
-			m.logVP = viewport.New(m.width-2, 5)
+			m.logVP = viewport.New(viewport.WithWidth(m.width-2), viewport.WithHeight(5))
 			m.logReady = true
 		}
 		m.resizeVP()
@@ -130,7 +130,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.setLogs(m.lastLogs)
 		}
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		switch msg.String() {
 		case "q", "Q", "ctrl+c":
 			m.quitting = true
@@ -161,7 +161,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.logVP.HalfPageUp()
 				m.userScroll = true
 			}
-		case "pgdown", " ":
+		case "pgdown", "space":
 			if m.logReady {
 				m.logVP.HalfPageDown()
 				if m.logVP.AtBottom() {
@@ -221,7 +221,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-func (m Model) View() string {
+func (m Model) View() tea.View {
+	v := tea.NewView(m.render())
+	v.AltScreen = true
+	return v
+}
+
+func (m Model) render() string {
 	if m.quitting {
 		if m.detach {
 			return "smithy: detached\n"
@@ -302,7 +308,7 @@ func Run(stackName, socketPath, logPath string, detach bool) error {
 			stackName: stackName,
 			detach:    detach,
 		}
-		p := tea.NewProgram(m, tea.WithAltScreen())
+		p := tea.NewProgram(m)
 		final, err := p.Run()
 		if err != nil {
 			return err

@@ -5,10 +5,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/textarea"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/cursor"
+	"charm.land/bubbles/v2/textarea"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"github.com/iorubs/smithy-cli/internal/agentchat"
 )
@@ -69,7 +70,7 @@ func (m chatModel) Init() tea.Cmd {
 		turns, err := cli.FetchHistory(ctx)
 		return chatHistoryMsg{turns: turns, err: err}
 	}
-	return tea.Batch(textarea.Blink, fetch)
+	return tea.Batch(cursor.Blink, fetch)
 }
 
 func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -84,23 +85,24 @@ func (m chatModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			vpH = 4
 		}
 		if !m.ready {
-			m.vp = viewport.New(m.width-2, vpH)
+			m.vp = viewport.New(viewport.WithWidth(m.width-2), viewport.WithHeight(vpH))
 			m.ready = true
 		} else {
-			m.vp.Width, m.vp.Height = m.width-2, vpH
+			m.vp.SetWidth(m.width - 2)
+			m.vp.SetHeight(vpH)
 		}
 		m.input.SetWidth(m.width - 6)
 		m.redraw()
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		if m.quitting {
 			break
 		}
-		switch msg.Type {
-		case tea.KeyCtrlC:
+		switch msg.String() {
+		case "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
-		case tea.KeyEnter:
+		case "enter":
 			text := strings.TrimSpace(m.input.Value())
 			if text == "" {
 				break
@@ -158,7 +160,7 @@ func (m *chatModel) redraw() {
 	if !m.ready {
 		return
 	}
-	width := m.vp.Width
+	width := m.vp.Width()
 	if width < 20 {
 		width = 20
 	}
@@ -214,7 +216,13 @@ func (m *chatModel) redraw() {
 	m.vp.GotoBottom()
 }
 
-func (m chatModel) View() string {
+func (m chatModel) View() tea.View {
+	v := tea.NewView(m.render())
+	v.AltScreen = true
+	return v
+}
+
+func (m chatModel) render() string {
 	if !m.ready {
 		return "starting...\n"
 	}
@@ -232,7 +240,7 @@ func (m chatModel) View() string {
 
 // RunChat opens a bubbletea chat TUI bound to client.
 func RunChat(client agentchat.Client, agentName string) error {
-	p := tea.NewProgram(newChatModel(client, agentName), tea.WithAltScreen())
+	p := tea.NewProgram(newChatModel(client, agentName))
 	_, err := p.Run()
 	return err
 }
